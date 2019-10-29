@@ -53,13 +53,14 @@ class Namespace(object):
         for namespace in cls.get_all():
             namespace.invalidate_cache()
 
-    def __init__(self, name, label):
+    def __init__(self, name, label, version='0001'):
         if name in self.__class__._registry:
             raise Exception(
                 'Namespace names must be unique; "%s" already exists.' % name
             )
         self.name = name
         self.label = label
+        self.version = version
         self.__class__._registry[name] = self
         self._settings = []
 
@@ -123,7 +124,18 @@ class Setting(object):
     def dump_data(cls, filter_term=None, namespace=None):
         dictionary = {}
 
+        if not namespace:
+            namespace_dictionary = {}
+            for _namespace in Namespace.get_all():
+                namespace_dictionary[_namespace.name] = {
+                    'version': _namespace.version
+                }
+
+            dictionary['SMART_SETTINGS_NAMESPACES'] = namespace_dictionary
+
         for setting in cls.get_all():
+            # If a namespace is specified, filter the list by that namespace
+            # otherwise return always True to include all (or not None == True)
             if (namespace and setting.namespace.name == namespace) or not namespace:
                 if (filter_term and filter_term.lower() in setting.global_name.lower()) or not filter_term:
                     dictionary[setting.global_name] = Setting.express_promises(setting.value)
